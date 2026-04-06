@@ -23,7 +23,7 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
       const { offsetWidth, offsetHeight } = containerRef.current;
 
       const scaleX = offsetWidth / BOOK_WIDTH;
-      const scaleY = offsetHeight / BOOK_HEIGHT;
+      const scaleY = (offsetHeight - 40) / BOOK_HEIGHT;
 
       setScale(Math.min(scaleX, scaleY));
     };
@@ -75,6 +75,7 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
         style={{
           ...styles.book,
           transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center center",
         }}
       >
         {Array.from({ length: totalPages }).map((_, i) => {
@@ -133,7 +134,8 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
 const styles: any = {
   container: {
     width: "100%",
-    height: "900px",
+    height: "100vh", // 👈 fallback
+    minHeight: "900px",
     background: "#111",
     position: "relative",
     overflow: "hidden",
@@ -145,7 +147,7 @@ const styles: any = {
     left: "50%",
     width: "800px",
     height: "1000px",
-    perspective: "2000px",
+    transformOrigin: "center center",
   },
 
   page: {
@@ -167,7 +169,7 @@ const styles: any = {
   image: {
     width: "100%",
     height: "100%",
-    objectFit: "cover", // 🔥 important
+    objectFit: "contain", // 🔥 important
     background: "black",
   },
 
