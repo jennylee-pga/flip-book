@@ -133,7 +133,7 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
 const styles: any = {
   container: {
     width: "100%",
-    height: "100%",
+    height: "900px",
     background: "#111",
     position: "relative",
     overflow: "hidden",
