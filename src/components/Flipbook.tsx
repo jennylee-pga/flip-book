@@ -8,7 +8,30 @@ type Props = {
 export default function FlipBook({ totalPages, baseUrl }: Props) {
   const [currentPage, setCurrentPage] = useState(0);
   const [loadedPages, setLoadedPages] = useState<number[]>([0, 1, 2]);
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
+
+  const BOOK_WIDTH = 800; // base design size
+  const BOOK_HEIGHT = 1000; // aspect ratio (portrait)
+
+  // 🔥 AUTO SCALE TO FIT CONTAINER
+  useEffect(() => {
+    const resize = () => {
+      if (!containerRef.current) return;
+
+      const { offsetWidth, offsetHeight } = containerRef.current;
+
+      const scaleX = offsetWidth / BOOK_WIDTH;
+      const scaleY = offsetHeight / BOOK_HEIGHT;
+
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
 
   // preload nearby pages
   useEffect(() => {
@@ -29,7 +52,7 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
     if (currentPage > 0) setCurrentPage((p) => p - 1);
   };
 
-  // swipe handling
+  // swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
   };
@@ -42,40 +65,49 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
 
   return (
     <div
+      ref={containerRef}
       style={styles.container}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {Array.from({ length: totalPages }).map((_, i) => {
-        const isFlipped = i < currentPage;
+      {/* CENTERED + SCALED BOOK */}
+      <div
+        style={{
+          ...styles.book,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }}
+      >
+        {Array.from({ length: totalPages }).map((_, i) => {
+          const isFlipped = i < currentPage;
 
-        return (
-          <div
-            key={i}
-            style={{
-              ...styles.page,
-              zIndex: totalPages - i,
-              transform: isFlipped ? "rotateY(-180deg)" : "rotateY(0deg)",
-            }}
-          >
-            {loadedPages.includes(i) && (
-              <div style={styles.pageInner}>
-                <img src={getImageUrl(i)} style={styles.image} loading="lazy" />
-                {/* shadow on active flipping page */}
-                {i === currentPage && <div style={styles.pageShadow} />}
-              </div>
-            )}
-          </div>
-        );
-      })}
+          return (
+            <div
+              key={i}
+              style={{
+                ...styles.page,
+                zIndex: totalPages - i,
+                transform: isFlipped ? "rotateY(-180deg)" : "rotateY(0deg)",
+              }}
+            >
+              {loadedPages.includes(i) && (
+                <div style={styles.pageInner}>
+                  <img
+                    src={getImageUrl(i)}
+                    style={styles.image}
+                    loading="lazy"
+                  />
 
-      {/* tap zones */}
+                  {i === currentPage && <div style={styles.pageShadow} />}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* click zones */}
       <div style={styles.leftZone} onClick={prevPage} />
       <div style={styles.rightZone} onClick={nextPage} />
-
-      {/* hint overlays */}
-      {currentPage > 0 && <div style={styles.hintLeft} />}
-      {currentPage < totalPages - 1 && <div style={styles.hintRight} />}
 
       {/* arrows */}
       {currentPage > 0 && (
@@ -90,7 +122,7 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
         </div>
       )}
 
-      {/* page indicator */}
+      {/* counter */}
       <div style={styles.counter}>
         {currentPage + 1} / {totalPages}
       </div>
@@ -100,12 +132,20 @@ export default function FlipBook({ totalPages, baseUrl }: Props) {
 
 const styles: any = {
   container: {
-    width: "100vw",
-    height: "100vh",
+    width: "100%",
+    height: "100%",
     background: "#111",
     position: "relative",
-    perspective: "2000px",
     overflow: "hidden",
+  },
+
+  book: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "800px",
+    height: "1000px",
+    perspective: "2000px",
   },
 
   page: {
@@ -113,7 +153,7 @@ const styles: any = {
     width: "100%",
     height: "100%",
     transformOrigin: "left center",
-    transition: "transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1)",
+    transition: "transform 0.8s cubic-bezier(0.22, 0.61, 0.36, 1)",
     backfaceVisibility: "hidden",
     transformStyle: "preserve-3d",
   },
@@ -124,21 +164,20 @@ const styles: any = {
     position: "relative",
   },
 
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover", // 🔥 important
+    background: "black",
+  },
+
   pageShadow: {
     position: "absolute",
     top: 0,
     right: 0,
-    width: "30px",
+    width: "40px",
     height: "100%",
-    background: "linear-gradient(to left, rgba(0,0,0,0.4), transparent)",
-    pointerEvents: "none",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    background: "black",
+    background: "linear-gradient(to left, rgba(0,0,0,0.5), transparent)",
   },
 
   leftZone: {
@@ -147,7 +186,7 @@ const styles: any = {
     top: 0,
     width: "30%",
     height: "100%",
-    zIndex: 900,
+    zIndex: 1000,
   },
 
   rightZone: {
@@ -156,28 +195,7 @@ const styles: any = {
     top: 0,
     width: "30%",
     height: "100%",
-    zIndex: 900,
-  },
-
-  hintLeft: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: "20%",
-    height: "100%",
-    background:
-      "linear-gradient(to right, rgba(255,255,255,0.05), transparent)",
-    pointerEvents: "none",
-  },
-
-  hintRight: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: "20%",
-    height: "100%",
-    background: "linear-gradient(to left, rgba(255,255,255,0.05), transparent)",
-    pointerEvents: "none",
+    zIndex: 1000,
   },
 
   leftArrow: {
@@ -188,9 +206,8 @@ const styles: any = {
     fontSize: "40px",
     color: "white",
     opacity: 0.6,
-    zIndex: 1000,
+    zIndex: 2000,
     cursor: "pointer",
-    animation: "pulse 1.5s infinite",
   },
 
   rightArrow: {
@@ -201,9 +218,8 @@ const styles: any = {
     fontSize: "40px",
     color: "white",
     opacity: 0.6,
-    zIndex: 1000,
+    zIndex: 2000,
     cursor: "pointer",
-    animation: "pulse 1.5s infinite",
   },
 
   counter: {
