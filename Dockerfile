@@ -22,6 +22,9 @@ RUN echo 'server { \
   location / { \
     try_files $uri $uri/ /index.html; \
   } \
+
+    add_header X-Frame-Options "ALLOWALL"; \
+  add_header Content-Security-Policy "frame-ancestors *"; \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
